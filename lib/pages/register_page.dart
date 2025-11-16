@@ -36,7 +36,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => LoginPage()),
+        MaterialPageRoute(
+          builder: (_) => LoginPage(defaultEmail: email.text), // <-- auto fill
+        ),
       );
     }
   }

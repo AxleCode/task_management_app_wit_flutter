@@ -38,23 +38,41 @@ class ApiService {
   // GET DASHBOARD
   static Future<Map<String, dynamic>> getDashboard() async {
     final token = await SecureStorage.getToken();
-
+    print("TOKEN ke dashboard = $token");
     final response = await http.get(
       Uri.parse("$baseUrl/dashboard"),
-      headers: {"Authorization": "Bearer $token"},
+      headers: 
+      {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
     );
 
     return jsonDecode(response.body);
   }
+
   static Future<List<TaskModel>> getTasks() async {
     final token = await SecureStorage.getToken();
+    print("TOKEN ke list = $token");
 
     final response = await http.get(
       Uri.parse("$baseUrl/tasks"),
-      headers: {"Authorization": "Bearer $token"},
+      headers: 
+      {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
     );
 
-    final List data = jsonDecode(response.body)['data'];
+    print("TASK RESPONSE: ${response.body}"); // Tambahkan ini
+
+    final json = jsonDecode(response.body);
+
+    if (json['data'] == null) {
+      throw Exception("API tidak mengembalikan data list");
+    }
+
+    final List data = json['data'];
     return data.map((e) => TaskModel.fromJson(e)).toList();
   }
 
@@ -64,7 +82,11 @@ class ApiService {
 
     final response = await http.put(
       Uri.parse("$baseUrl/tasks/$id"),
-      headers: {"Authorization": "Bearer $token"},
+      headers: 
+      {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
       body: {"status": newStatus.toString()},
     );
 

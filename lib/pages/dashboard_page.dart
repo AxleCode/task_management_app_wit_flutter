@@ -1,9 +1,10 @@
-// import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:hive/hive.dart';
 import '../api/api_service.dart';
 import '../models/task_model.dart';
+import '../utils/secure_storage.dart';
+import 'login_page.dart';
 
 class DashboardPage extends StatefulWidget {
   @override
@@ -17,19 +18,46 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    initHive();
-    monitorConnection();
+    initHive(); // hanya ini, monitorConnection dipindah
   }
 
+  String userName = "";
+
+  // --- HIVE INIT ---
   initHive() async {
     taskBox = await Hive.openBox<TaskModel>("tasks");
+
+    var userBox = await Hive.openBox("userBox");
+    setState(() {
+      userName = userBox.get("name") ?? "";
+    });
+
     await loadData();
+    monitorConnection(); // <-- DIPANGGIL SETELAH taskBox siap
+  }
+
+  // LOGOUT
+  Future<void> logout() async {
+    var userBox = await Hive.openBox("userBox"); // box penyimpanan login
+    await userBox.clear(); // hapus data login
+    await userBox.close();
+
+    await SecureStorage.deleteToken(); // hapus token
+
+    // pindah ke LoginPage
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => LoginPage()),
+    );
   }
 
   // cek koneksi dan sync otomatis
   monitorConnection() {
     Connectivity().onConnectivityChanged.listen((status) {
       if (status != ConnectivityResult.none) {
+        // tambahkan pengaman jika taskBox belum siap (extra safety)
+        if (!taskBox.isOpen) return;
+
         syncData();
       }
     });
@@ -37,27 +65,33 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // ambil data
   loadData() async {
-    final connectivity = await Connectivity().checkConnectivity();
+    try {
+      final connectivity = await Connectivity().checkConnectivity();
 
-    if (connectivity != ConnectivityResult.none) {
-      // ONLINE → ambil dari API
-      final apiTasks = await ApiService.getTasks();
-      setState(() => tasks = apiTasks);
+      if (connectivity != ConnectivityResult.none) {
+        // ONLINE → ambil dari API
+        final apiTasks = await ApiService.getTasks();
+        setState(() => tasks = apiTasks);
 
-      // simpan ke hive
-      taskBox.clear();
-      for (var t in apiTasks) {
-        taskBox.put(t.id, t);
+        // simpan ke hive
+        await taskBox.clear();
+        for (var t in apiTasks) {
+          taskBox.put(t.id, t);
+        }
+      } else {
+        // OFFLINE → ambil dari Hive
+        setState(() => tasks = taskBox.values.cast<TaskModel>().toList());
       }
-    } else {
-      // OFFLINE → ambil dari Hive
-      setState(() => tasks = taskBox.values.cast<TaskModel>().toList());
+    } catch (e) {
+      print("Error loadData: $e");
     }
   }
 
   // sync update status offline → server
   syncData() async {
-    for (var t in taskBox.values) {
+    if (!taskBox.isOpen) return; // extra safety
+
+    for (var t in taskBox.values.cast<TaskModel>()) {
       await ApiService.updateTaskStatus(t.id, t.status);
     }
   }
@@ -88,8 +122,19 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext ctx) {
     return Scaffold(
-      appBar: AppBar(title: Text("Dashboard Task")),
-      body: tasks.isEmpty
+      appBar: AppBar(
+        title: Text("Dashboard Task - $userName"),
+
+        // === TOMBOL LOGOUT ===
+        actions: [
+            IconButton(
+              icon: Icon(Icons.logout),
+              onPressed: logout,
+            ),
+          ],
+        ),
+        
+        body: tasks.isEmpty
           ? Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: () async => loadData(),

@@ -14,4 +14,8 @@ class SecureStorage {
   static Future logout() async {
     await _storage.delete(key: "token");
   }
+
+  static Future<void> deleteToken() async {
+    await _storage.delete(key: 'token');
+  }
 }
