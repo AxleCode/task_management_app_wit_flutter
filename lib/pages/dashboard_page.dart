@@ -24,7 +24,7 @@ class _DashboardPageState extends State<DashboardPage> {
   String userName = "";
 
   // --- HIVE INIT ---
-  initHive() async {
+  Future<void> initHive() async {
     taskBox = await Hive.openBox<TaskModel>("tasks");
 
     var userBox = await Hive.openBox("userBox");
@@ -52,7 +52,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // cek koneksi dan sync otomatis
-  monitorConnection() {
+  void monitorConnection() {
     Connectivity().onConnectivityChanged.listen((status) {
       if (status != ConnectivityResult.none) {
         // tambahkan pengaman jika taskBox belum siap (extra safety)
@@ -64,7 +64,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ambil data
-  loadData() async {
+  Future<void> loadData() async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
 
@@ -88,7 +88,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // sync update status offline → server
-  syncData() async {
+  Future<void> syncData() async {
     if (!taskBox.isOpen) return; // extra safety
 
     for (var t in taskBox.values.cast<TaskModel>()) {
@@ -97,7 +97,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // update status
-  updateStatus(TaskModel task) async {
+  Future<void> updateStatus(TaskModel task) async {
     int newStatus = (task.status + 1) % 3;
 
     task.status = newStatus;
@@ -110,7 +110,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  statusLabel(int s) {
+  String statusLabel(int s) {
     switch (s) {
       case 0: return "Pending";
       case 1: return "In-Progress";

@@ -29,7 +29,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  login() async {
+  Future<void> login() async {
   setState(() => loading = true);
 
   final res = await ApiService.login(email.text, password.text);

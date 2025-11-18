@@ -12,7 +12,7 @@ class _RegisterPageState extends State<RegisterPage> {
   TextEditingController email = TextEditingController();
   TextEditingController password = TextEditingController();
 
- register() async {
+ Future<void> register() async {
     final res = await ApiService.register(
       name.text,
       email.text,
